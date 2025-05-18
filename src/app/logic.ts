@@ -257,7 +257,7 @@ function getContactRule(ageGroup: string, belt: string): string {
         return contactRuleEntry.belts.all;
     }
 
-    return contactRuleEntry.belts[belt] || 'No contact rule found';
+    return contactRuleEntry.belts[belt as keyof typeof contactRuleEntry.belts] || 'No contact rule found';
 }
 
 // Function to process forms competitors
@@ -330,12 +330,11 @@ function processBreakingCompetitors(
             unmatchedBreaking.push({ ...group[0], reason: 'Only one competitor in group' }); // Add to unmatched if only one competitor
         }
     }
-    Object.assign(breakingGroups, grouped);
 }
 
 // Main function to sort competitors
 function sortCompetitors(competitors: Competitor[]) {
-    const sparringBrackets: Record<string, Competitor[]> = {};
+    const sparringBrackets: Record<string, { contactRule: string; competitors: Competitor[] }> = {};
     const formsGroups: Record<string, Competitor[]> = {};
     const breakingGroups: Record<string, Competitor[]> = {};
     const unmatchedSparring: Competitor[] = [];
