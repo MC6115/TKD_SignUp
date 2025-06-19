@@ -40,7 +40,8 @@ export default function AdminPage() {
   const [data, setData] = useState<Competitor[]>([])
   const [loading, setLoading] = useState(true)
   const [brackets, setBrackets] = useState<unknown[]>([])
-  const [unmatched, setUnmatched] = useState<unknown[]>([])
+  type UnmatchedCompetitor = Competitor & { event: string; reason?: string }
+  const [unmatched, setUnmatched] = useState<UnmatchedCompetitor[]>([])
   const [filters, setFilters] = useState({
     ageGroup: "",
     weightClass: "",
@@ -109,12 +110,26 @@ export default function AdminPage() {
 
         setBrackets(allBrackets)
 
-        // Collect all unmatched competitors
-        const allUnmatched = [
-          ...result.unmatchedSparring.map((c) => ({ ...c, event: "sparring" })),
-          ...result.unmatchedForms.map((c) => ({ ...c, event: "forms" })),
-          ...result.unmatchedBreaking.map((c) => ({ ...c, event: "breaking" })),
+        // Type guard to ensure object has all Competitor properties
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        function isCompetitor(obj: any): obj is Competitor {
+          return (
+            obj &&
+            typeof obj.name === "string" &&
+            typeof obj.age === "number" &&
+            typeof obj.weight === "number" &&
+            typeof obj.gender === "string" &&
+            Array.isArray(obj.events) &&
+            typeof obj.belt === "string"
+          )
+        }
+
+        const allUnmatched: UnmatchedCompetitor[] = [
+          ...result.unmatchedSparring.filter(isCompetitor).map((c) => ({ ...c, event: "sparring" })),
+          ...result.unmatchedForms.filter(isCompetitor).map((c) => ({ ...c, event: "forms" })),
+          ...result.unmatchedBreaking.filter(isCompetitor).map((c) => ({ ...c, event: "breaking" })),
         ]
+        setUnmatched(allUnmatched)
         setUnmatched(allUnmatched)
 
         // Get filter options from the actual data
@@ -130,7 +145,7 @@ export default function AdminPage() {
           events,
           belts,
           genders,
-          reasons,
+          reasons: reasons.filter((r): r is string => typeof r === "string"),
         })
       })
       .catch((error) => {
