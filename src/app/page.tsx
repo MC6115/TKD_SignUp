@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import Navigation from "@/components/navigation"
 import { toast } from "sonner"
-import { useTheme } from "next-themes"
 
 type Competitor = {
   name: string
@@ -23,6 +22,7 @@ type Competitor = {
 }
 
 export default function Home() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [data, setData] = useState<Competitor[]>([])
   const [form, setForm] = useState<Competitor>({
     name: "",
@@ -34,7 +34,6 @@ export default function Home() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
-  const { theme, setTheme } = useTheme()
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -167,26 +166,11 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       <Navigation />
-
-      <div className="container mx-auto px-6 py-12">
         <div className="max-w-md mx-auto">
           <div className="text-center space-y-2 mb-8">
             <h1 className="text-3xl font-bold tracking-tight text-slate-800 dark:text-slate-100">Tournament Manager</h1>
             <h2 className="text-xl font-semibold text-slate-600 dark:text-slate-300">Competitor Registration</h2>
             <p className="text-slate-500 dark:text-slate-400">Register new competitors for the tournament</p>
-
-            {/* Theme toggle button */}
-            <div className="flex justify-center mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="text-xs"
-              >
-                {theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              </Button>
-            </div>
-          </div>
 
           <Card className="shadow-lg border-0 dark:bg-slate-800 dark:border-slate-700">
             <CardHeader className="bg-slate-50 rounded-t-lg dark:bg-slate-700">

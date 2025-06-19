@@ -39,8 +39,9 @@ function findAgeGroup(age: number) {
 export default function AdminPage() {
   const [data, setData] = useState<Competitor[]>([])
   const [loading, setLoading] = useState(true)
-  const [brackets, setBrackets] = useState<any[]>([])
-  const [unmatched, setUnmatched] = useState<any[]>([])
+  const [brackets, setBrackets] = useState<unknown[]>([])
+  type UnmatchedCompetitor = Competitor & { event: string; reason?: string }
+  const [unmatched, setUnmatched] = useState<UnmatchedCompetitor[]>([])
   const [filters, setFilters] = useState({
     ageGroup: "",
     weightClass: "",
@@ -54,7 +55,14 @@ export default function AdminPage() {
     gender: "",
     reason: "",
   })
-  const [filterOptions, setFilterOptions] = useState({
+  const [filterOptions, setFilterOptions] = useState<{
+    ageGroups: string[]
+    weightClasses: string[]
+    events: string[]
+    belts: string[]
+    genders: string[]
+    reasons: string[]
+  }>({
     ageGroups: [],
     weightClasses: [],
     events: [],
@@ -102,19 +110,33 @@ export default function AdminPage() {
 
         setBrackets(allBrackets)
 
-        // Collect all unmatched competitors
-        const allUnmatched = [
-          ...result.unmatchedSparring.map((c) => ({ ...c, event: "sparring" })),
-          ...result.unmatchedForms.map((c) => ({ ...c, event: "forms" })),
-          ...result.unmatchedBreaking.map((c) => ({ ...c, event: "breaking" })),
+        // Type guard to ensure object has all Competitor properties
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        function isCompetitor(obj: any): obj is Competitor {
+          return (
+            obj &&
+            typeof obj.name === "string" &&
+            typeof obj.age === "number" &&
+            typeof obj.weight === "number" &&
+            typeof obj.gender === "string" &&
+            Array.isArray(obj.events) &&
+            typeof obj.belt === "string"
+          )
+        }
+
+        const allUnmatched: UnmatchedCompetitor[] = [
+          ...result.unmatchedSparring.filter(isCompetitor).map((c) => ({ ...c, event: "sparring" })),
+          ...result.unmatchedForms.filter(isCompetitor).map((c) => ({ ...c, event: "forms" })),
+          ...result.unmatchedBreaking.filter(isCompetitor).map((c) => ({ ...c, event: "breaking" })),
         ]
+        setUnmatched(allUnmatched)
         setUnmatched(allUnmatched)
 
         // Get filter options from the actual data
-        const ageGroups = [...new Set(competitors.map((c) => findAgeGroup(c.age)).filter(Boolean))]
+        const ageGroups = [...new Set(competitors.map((c: { age: number }) => findAgeGroup(c.age)).filter(Boolean))] as string[]
         const events = ["sparring", "forms", "breaking"]
         const belts = ["yellow", "green", "blue", "red", "black"]
-        const genders = [...new Set(competitors.map((c) => c.gender))]
+        const genders = [...new Set(competitors.map((c: { gender: boolean }) => c.gender))] as string[]
         const reasons = [...new Set(allUnmatched.map((c) => c.reason).filter(Boolean))]
 
         setFilterOptions({
@@ -123,7 +145,7 @@ export default function AdminPage() {
           events,
           belts,
           genders,
-          reasons,
+          reasons: reasons.filter((r): r is string => typeof r === "string"),
         })
       })
       .catch((error) => {
@@ -168,19 +190,30 @@ export default function AdminPage() {
   }
 
   const filteredBrackets = brackets.filter((bracket) => {
-    if (filters.ageGroup && !bracket.key.includes(filters.ageGroup)) return false
-    if (filters.gender && !bracket.key.includes(filters.gender)) return false
-    if (filters.weightClass && !bracket.key.includes(filters.weightClass)) return false
-    if (filters.event && bracket.type !== filters.event) return false
-    if (filters.belt && !bracket.key.includes(filters.belt)) return false
-    return true
+    if (
+      typeof bracket === "object" &&
+      bracket !== null &&
+      "key" in bracket &&
+      "type" in bracket
+    ) {
+      const b = bracket as { key: string; type: string }
+      if (filters.ageGroup && !b.key.includes(filters.ageGroup)) return false
+      if (filters.gender && !b.key.includes(filters.gender)) return false
+      if (filters.weightClass && !b.key.includes(filters.weightClass)) return false
+      if (filters.event && b.type !== filters.event) return false
+      if (filters.belt && !b.key.includes(filters.belt)) return false
+      return true
+    }
+    return false
   })
 
   const filteredUnmatched = unmatched.filter((competitor) => {
-    if (unmatchedFilters.event && competitor.event !== unmatchedFilters.event) return false
-    if (unmatchedFilters.belt && competitor.belt !== unmatchedFilters.belt) return false
-    if (unmatchedFilters.gender && competitor.gender !== unmatchedFilters.gender) return false
-    if (unmatchedFilters.reason && competitor.reason !== unmatchedFilters.reason) return false
+    if (typeof competitor !== "object" || competitor === null) return false
+    const c = competitor as { event?: string; belt?: string; gender?: string; reason?: string }
+    if (unmatchedFilters.event && c.event !== unmatchedFilters.event) return false
+    if (unmatchedFilters.belt && c.belt !== unmatchedFilters.belt) return false
+    if (unmatchedFilters.gender && c.gender !== unmatchedFilters.gender) return false
+    if (unmatchedFilters.reason && c.reason !== unmatchedFilters.reason) return false
     return true
   })
 
@@ -406,21 +439,24 @@ export default function AdminPage() {
                     <Card key={index} className="bracket overflow-hidden">
                       <CardHeader className="bg-slate-50">
                         <CardTitle className="text-lg flex items-center gap-2">
-                          {getEventIcon(bracket.type)}
-                          {bracket.name}
+                          {getEventIcon((bracket as { type: string }).type)}
+                          {(bracket as { name: string }).name}
                         </CardTitle>
                         <CardDescription className="space-y-1">
-                          <div>{bracket.competitors.length} competitors</div>
-                          {bracket.contactRule && (
-                            <div className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                              Contact Rule: {bracket.contactRule}
-                            </div>
-                          )}
+                          <div>{(bracket as { competitors: Competitor[] }).competitors.length} competitors</div>
+                          {typeof bracket === "object" &&
+                            bracket !== null &&
+                            "contactRule" in bracket &&
+                            (bracket as { contactRule?: string }).contactRule && (
+                              <div className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                Contact Rule: {(bracket as { contactRule?: string }).contactRule}
+                              </div>
+                            )}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="p-6">
                         <div className="grid gap-3">
-                          {bracket.competitors.map((competitor: any, compIndex: number) => (
+                          {(bracket as { competitors: Competitor[] }).competitors.map((competitor: Competitor, compIndex: number) => (
                             <div
                               key={compIndex}
                               className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
@@ -462,7 +498,7 @@ export default function AdminPage() {
                     Unmatched Competitors
                   </CardTitle>
                   <CardDescription>
-                    Competitors who couldn't be placed in brackets ({filteredUnmatched.length} of {unmatched.length}{" "}
+                    Competitors who couldn&#39;t be placed in brackets ({filteredUnmatched.length} of {unmatched.length}{" "}
                     shown)
                   </CardDescription>
                 </CardHeader>
@@ -622,7 +658,7 @@ export default function AdminPage() {
                 <CardContent>
                   {data.length > 0 ? (
                     <div className="space-y-4">
-                      {data.map((competitor, index) => (
+                      {data.map((competitor: Competitor, index: number) => (
                         <div
                           key={index}
                           className="p-4 border rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow"
