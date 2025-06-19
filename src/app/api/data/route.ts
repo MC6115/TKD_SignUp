@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import clientPromise from '@/app/lib/mongodb';
+// import clientPromise from '@/app/lib/mongodb';
 import { connectDB } from "@/app/lib/mongodb";
-import { Competitor } from '@/types';
-import { sortCompetitors } from "@/logic";
+// import { Competitor } from '@/types';
+// import { sortCompetitors } from "@/logic";
 
 
 
@@ -18,3 +18,4 @@ export async function POST(req: NextRequest) {
   await db.collection("competitors").insertOne(body);
   const competitors = await db.collection("competitors").find().toArray();
   return NextResponse.json(competitors);
+}
