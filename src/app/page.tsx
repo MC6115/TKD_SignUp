@@ -23,6 +23,7 @@ type Competitor = {
 }
 
 export default function Home() {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [data, setData] = useState<Competitor[]>([])
   const [form, setForm] = useState<Competitor>({
     name: "",
